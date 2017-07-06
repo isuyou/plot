@@ -1,0 +1,3 @@
+May  need to change iterator for ArrayList<DataPoint> dataPoints: 
+	-May not be destroying reference objects upon reset, leading to memory leaks with garbage collector
+	-Need to iterate through by using remove() method instead, or command delete object memory through main program thread

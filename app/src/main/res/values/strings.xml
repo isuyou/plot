@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Graph Plot</string>
+    <string name="redo">Redo</string>
+    <string name="undo">Undo</string>
 </resources>

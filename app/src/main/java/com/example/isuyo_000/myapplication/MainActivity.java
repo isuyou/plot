@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 
@@ -13,16 +14,12 @@ import android.widget.Toast;
 
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
-import com.jjoe64.graphview.series.DataPointInterface;
 import com.jjoe64.graphview.series.LineGraphSeries;
-import com.jjoe64.graphview.series.OnDataPointTapListener;
-import com.jjoe64.graphview.series.Series;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedList;
-import java.util.PriorityQueue;
-import java.util.Queue;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,9 +28,12 @@ public class MainActivity extends AppCompatActivity {
     DataPoint[] dataPointsArray;
 
     //stores history of the graph for undo settings
-    private LinkedList<ArrayList<Coordinates>> undo = new LinkedList<ArrayList<Coordinates>>();
-    private LinkedList<ArrayList<Coordinates>> redo = new LinkedList<ArrayList<Coordinates>>();
-    private static final int threshold = 5;
+    //linked lists used as stacks
+    private LinkedList<ArrayList<Coordinates>> undoStack = new LinkedList<ArrayList<Coordinates>>();
+    private LinkedList<ArrayList<Coordinates>> redoStack = new LinkedList<ArrayList<Coordinates>>();
+    private static final int threshold = 10;
+    private Button undo;
+    private Button redo;
 
 
     //selectedIndex default value -1 represents no Index is selected
@@ -51,9 +51,6 @@ public class MainActivity extends AppCompatActivity {
     ScaleGestureDetector gestureDetector;
     boolean isScaling = false;
     boolean finishScaling = false;
-
-
-
 
 
     @Override
@@ -80,10 +77,23 @@ public class MainActivity extends AppCompatActivity {
             lineGraph.appendData(currentPoint, true, 500);
             x = x + 1;
         }
-        //***save the state of the points
-        logUndo();
+
 
         //draw points
+        drawPoints(lineGraph);
+
+        //initializes undo and redo for the application
+        createUndoRedo();
+
+
+        //detector for pinch
+        gestureDetector = new ScaleGestureDetector(this, new ScaleListener());
+    }
+
+    /**draw points onto graph
+     *  @param lineGraph : the series of data points to draw (specifically for a line graph)
+     */
+    private void drawPoints(LineGraphSeries lineGraph){
         lineGraph.setDrawDataPoints(true);
         graph.getViewport().setXAxisBoundsManual(true);
         graph.getViewport().setMinX(minX);
@@ -94,28 +104,141 @@ public class MainActivity extends AppCompatActivity {
         graph.addSeries(lineGraph);
         graph.refreshDrawableState();
         graph.setOnTouchListener(new movePoint());
-
-        //adds first undo point
-
-
-        //detector for pinch
-        gestureDetector = new ScaleGestureDetector(this, new ScaleListener());
-
-
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        /*
-        int[] location = new int[2];
-        graph.getLocationOnScreen(location);
-        Log.d( "State", "" + location[1]);
-        Log.d( "State", "" + location[2]);
-        */
-
+    /**
+     * creates undo and redo buttons functionality and sets first undo/redo link
+     */
+    private void createUndoRedo(){
+        undo =  (Button) findViewById(R.id.undo);
+        redo =  (Button) findViewById(R.id.redo);
+        //links undo button to undo method
+        undo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                undo();
+            }
+        });
+        //links redo button to redo method
+        redo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                redo();
+            }
+        });
+        undo.setEnabled(false);
+        redo.setEnabled(false);
     }
+
+    /**
+     * enables current state of data points to be copied into the data point undo Queue
+     * I.E. adds 1 to the undoStack
+     */
+    private void logUndo(){
+        //resets the redo storage log after new changes are implemented in between undo's
+        redoStack = new LinkedList<ArrayList<Coordinates>>();
+
+        //copies current data points over into Coordinate representation
+        ArrayList<Coordinates> dataPointList = convertDataPointsToCoordinates(this.dataPoints);
+
+        //adds all converted data points to undo stack
+        if(undoStack.size() >= threshold){
+            undoStack.remove(1);
+            undoStack.addLast(dataPointList);
+        }
+        else{
+            undoStack.addLast(dataPointList);
+        }
+
+
+        undo.setEnabled(true);
+        redo.setEnabled(false);
+    }
+
+    /**
+     * converts an array of data points into a list of Coordinates
+     * @param dataPoints: the collection or set of data points that will be converted
+     * @return : the converted list of output items with just x and y coordinates
+     */
+    private ArrayList<Coordinates> convertDataPointsToCoordinates(Collection<DataPoint> dataPoints){
+        ArrayList<Coordinates> output = new ArrayList<Coordinates>();
+        for(DataPoint dataPoint : dataPoints){
+            output.add(new Coordinates(dataPoint.getX(), dataPoint.getY()));
+        }
+        return output;
+    }
+
+    /**
+     * method returns graph to a previous state
+     * should only be called by the button's press
+     */
+    private void undo(){
+        if(undoStack.isEmpty()){
+            undo.setEnabled(false);
+            return;
+        }
+        //instantiate variables
+        LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
+        ArrayList<Coordinates> coordinates =  undoStack.removeLast();
+        redoStack.addLast(convertDataPointsToCoordinates(this.dataPoints));
+        DataPoint currentPoint;
+        dataPoints = new ArrayList<DataPoint>();
+        selectedIndex = -1;
+
+        //converts all coordinates to data points
+        for(Coordinates coordinate : coordinates){
+            currentPoint = new DataPoint(coordinate.x, coordinate.y);
+            dataPoints.add(currentPoint);
+            lineGraph.appendData(currentPoint, true, 500);
+        }
+
+        //redraws graph with new data points
+        lineGraph.setDrawDataPoints(true);
+        graph.removeAllSeries();
+        graph.addSeries(lineGraph);
+
+        //checks if undo is available
+        //if the undo stack is empty, disables button
+        if(undoStack.isEmpty())
+            undo.setEnabled(false);
+        redo.setEnabled(true);
+    }
+
+    /**
+     * method returns graph to a previous state changed by undo button
+     * should only be called by the redo button's press
+     */
+    private void redo(){
+        if(redoStack.isEmpty()){
+            redo.setEnabled(false);
+            return;
+        }
+
+        //instantiate variables
+        LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
+        ArrayList<Coordinates> coordinates =  redoStack.removeLast();
+        undoStack.addLast(convertDataPointsToCoordinates(this.dataPoints));
+        DataPoint currentPoint;
+        dataPoints = new ArrayList<DataPoint>();
+        selectedIndex = -1;
+
+        //converts all coordinates to data points
+        for(Coordinates coordinate : coordinates){
+            currentPoint = new DataPoint(coordinate.x, coordinate.y);
+            dataPoints.add(currentPoint);
+            lineGraph.appendData(currentPoint, true, 500);
+        }
+
+        //redraws graph with new data points
+        lineGraph.setDrawDataPoints(true);
+        graph.removeAllSeries();
+        graph.addSeries(lineGraph);
+
+        if(redoStack.isEmpty())
+            redo.setEnabled(false);
+        undo.setEnabled(true);
+    }
+
 
     //moves single point on touch
     private class movePoint implements View.OnTouchListener {
@@ -247,17 +370,14 @@ public class MainActivity extends AppCompatActivity {
         //selectedIndex = -1;
     }
 
-    //enables current state of data points to be copied into the data point undo Queue
-    private void logUndo(){
-        ArrayList<Coordinates> dataPointList = new ArrayList<Coordinates>();
-        for(DataPoint dataPoint : dataPoints){
-            dataPointList.add(new Coordinates(dataPoint.getX(), dataPoint.getY()));
-        }
-    }
+
 
     //finds selected data point and changes its position
     protected void changeDataPoint(float x, float y, int selectedIndex){
         if(selectedIndex >= 0){
+            //add save state to undo recovery
+            logUndo();
+
             float xPos = (x- graph.getGraphContentLeft()) * domain / graph.getGraphContentWidth();
             //constrain bounds to localed inside graph
             if (selectedIndex == 0)
@@ -289,6 +409,10 @@ public class MainActivity extends AppCompatActivity {
     //scales the data points for pinch-changes
     //takes in X and Y scaling values from 0 < x,y < infinity : where 1 is the same distance apart, <1 is smaller, and >1 is larger
     protected void scaleDataPoints(float scaleX, float scaleY){
+        //add save state to undo recovery
+        logUndo();
+
+        //changes  every data point relative to selected index data point
         if(selectedIndex >= 0){
             int i =0;
             for(DataPoint dataPoint : dataPoints){
@@ -373,6 +497,9 @@ public class MainActivity extends AppCompatActivity {
                 return 0;
         }
     };
+
+
+
 
 }
 
