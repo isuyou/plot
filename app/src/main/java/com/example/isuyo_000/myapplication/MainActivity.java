@@ -35,6 +35,10 @@ public class MainActivity extends AppCompatActivity {
     private Button undo;
     private Button redo;
 
+    //Controls for adding and removing points
+    private Button addPoint;
+    private Button removePoint;
+
 
     //selectedIndex default value -1 represents no Index is selected
     Integer selectedIndex = -1;
@@ -85,6 +89,9 @@ public class MainActivity extends AppCompatActivity {
         //initializes undo and redo for the application
         createUndoRedo();
 
+        //initializes
+        createAddRemove();
+
 
         //detector for pinch
         gestureDetector = new ScaleGestureDetector(this, new ScaleListener());
@@ -105,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
         graph.refreshDrawableState();
         graph.setOnTouchListener(new movePoint());
     }
+
 
     /**
      * creates undo and redo buttons functionality and sets first undo/redo link
@@ -128,6 +136,63 @@ public class MainActivity extends AppCompatActivity {
         });
         undo.setEnabled(false);
         redo.setEnabled(false);
+    }
+
+    /**
+     * creates add and remove for points on the graph
+     */
+    private void createAddRemove(){
+        addPoint =  (Button) findViewById(R.id.add);
+        removePoint =  (Button) findViewById(R.id.remove);
+        //links addPoint button to addPoint action
+        addPoint.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addPoint();
+            }
+        });
+
+        //links removePoint button to removePoint action
+        removePoint.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                removePoint();
+            }
+        });
+
+    }
+
+    /**
+     * calls to addRemovePoints methods with private parameters
+     */
+    private void addPoint(){
+        dataPoints = addRemovePoints.addPoint(dataPoints);
+        LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
+        for(DataPoint dataPoint : dataPoints) {
+            lineGraph.appendData(dataPoint, true, 500);
+        }
+        lineGraph.setDrawDataPoints(true);
+        graph.removeAllSeries();
+        graph.addSeries(lineGraph);
+    }
+
+    private void removePoint(){
+        try {
+            dataPoints = addRemovePoints.removePoint(dataPoints, selectedIndex);
+            LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
+            for (DataPoint dataPoint : dataPoints) {
+                lineGraph.appendData(dataPoint, true, 500);
+            }
+            lineGraph.setDrawDataPoints(true);
+            graph.removeAllSeries();
+            graph.addSeries(lineGraph);
+            
+            //reset selected index
+            selectedIndex = -1;
+        }
+        catch(IllegalArgumentException e){
+            //TODO: add error handling
+        }
     }
 
     /**

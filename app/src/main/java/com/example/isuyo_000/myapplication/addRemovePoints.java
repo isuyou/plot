@@ -19,7 +19,7 @@ public class addRemovePoints{
      * @param dataPoints : the initial set of data points
      * @return a new set of Data with an extra point appended to the end
      */
-    private static ArrayList<DataPoint> addPoint(ArrayList<DataPoint> dataPoints){
+    public static ArrayList<DataPoint> addPoint(ArrayList<DataPoint> dataPoints){
         double lastY = 0;
         double lastX = 0;
         ArrayList<DataPoint> newPoints = new ArrayList<DataPoint>();
@@ -46,7 +46,7 @@ public class addRemovePoints{
      * @param selectedIndex  : which data point to remove;  does not allow change of the anchors
      * @return a new set of Data with the selectedd point removed
      */
-    private static ArrayList<DataPoint> removePoint(ArrayList<DataPoint> dataPoints, int selectedIndex)throws IllegalArgumentException{
+    public static ArrayList<DataPoint> removePoint(ArrayList<DataPoint> dataPoints, int selectedIndex)throws IllegalArgumentException{
         //makes sure selectedIndex is valid
         if((selectedIndex <= 0) || (selectedIndex >= (dataPoints.size() - 1))){
             throw new IllegalArgumentException("invalid selection index in set of Data Points");
