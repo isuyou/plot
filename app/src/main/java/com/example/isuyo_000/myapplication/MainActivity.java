@@ -160,12 +160,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
     }
 
     /**
      * calls to addRemovePoints methods with private parameters
      */
     private void addPoint(){
+        logUndo();
         dataPoints = addRemovePoints.addPoint(dataPoints);
         LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
         for(DataPoint dataPoint : dataPoints) {
@@ -178,6 +180,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void removePoint(){
         try {
+            logUndo();
             dataPoints = addRemovePoints.removePoint(dataPoints, selectedIndex);
             LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
             for (DataPoint dataPoint : dataPoints) {
@@ -192,6 +195,12 @@ public class MainActivity extends AppCompatActivity {
         }
         catch(IllegalArgumentException e){
             //TODO: add error handling
+            Toast toast = Toast.makeText(
+                    getApplicationContext(),
+                    "invalid index to remove:  " + selectedIndex,
+                    Toast.LENGTH_LONG
+            );
+            toast.show();
         }
     }
 
@@ -332,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
                             getApplicationContext(),
                             //"X: " + event.getX() + " Y: " + event.getY() + " Width: " + graph.getGraphContentWidth() + " Height: " + graph.getGraphContentHeight(),
                             "selectedIndex:  " + selectedIndex,
-                            Toast.LENGTH_LONG
+                            Toast.LENGTH_SHORT
                     );
                     toast.show();
                     break;
