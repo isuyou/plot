@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     //selectedIndex default value -1 represents no Index is selected
     Integer selectedIndex = -1;
+    Integer lastSelectedIndex = -1;
     Integer minX = 0;
     Integer minY = 0;
     Integer range = 1;
@@ -181,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
     private void removePoint(){
         try {
             logUndo();
-            dataPoints = addRemovePoints.removePoint(dataPoints, selectedIndex);
+            dataPoints = addRemovePoints.removePoint(dataPoints, lastSelectedIndex);
             LineGraphSeries lineGraph = new LineGraphSeries<DataPoint>();
             for (DataPoint dataPoint : dataPoints) {
                 lineGraph.appendData(dataPoint, true, 500);
@@ -197,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
             //TODO: add error handling
             Toast toast = Toast.makeText(
                     getApplicationContext(),
-                    "invalid index to remove:  " + selectedIndex,
+                    "invalid index to remove:  " + lastSelectedIndex,
                     Toast.LENGTH_LONG
             );
             toast.show();
@@ -349,6 +350,10 @@ public class MainActivity extends AppCompatActivity {
                 case MotionEvent.ACTION_UP:
                     if(!isScaling) {
                         changeDataPoint(event.getX(), event.getY(), selectedIndex);
+
+                        //reset and track last selected index
+                        lastSelectedIndex = selectedIndex;
+                        selectedIndex = -1;
                     }
                     isScaling = false;
                     break;
@@ -435,8 +440,8 @@ public class MainActivity extends AppCompatActivity {
                 if(selectedIndex != i)
                     selectedIndex = i;
                 else
-                    selectedIndex = -1;
-                    //selectedIndex = i;
+                    //selectedIndex = -1;
+                    selectedIndex = i;
                 return;
             }
             i++;
@@ -477,6 +482,9 @@ public class MainActivity extends AppCompatActivity {
             }
             lineGraph.setDrawDataPoints(true);
             graph.addSeries(lineGraph);
+
+
+
         }
     }
 
